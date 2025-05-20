@@ -29,9 +29,13 @@ class CtpMdApi(MdApi):
         print(data)
 
 
-if __name__ == '__main__':
+def main():
     api = CtpMdApi()
     api.createFtdcMdApi('.')
     api.registerFront("tcp://180.168.146.187:10211")
     api.init()
     input()
+
+
+if __name__ == '__main__':
+    main()
