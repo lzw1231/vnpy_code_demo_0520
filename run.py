@@ -56,7 +56,7 @@ def main():
     api.sig_msg.proxy.connect(window.txt_browser.append)
 
     api.createFtdcMdApi('./log')
-    api.registerFront("tcp://180.168.146.187:10211")
+    api.registerFront("tcp://180.168.146.187:10131")
     api.init()
 
     window.show()
