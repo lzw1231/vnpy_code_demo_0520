@@ -1,18 +1,31 @@
-import sys
-
-import qtpy
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 from vnpy_ctp.api import MdApi
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore
 import simple_window
 
 
-class CtpMdApi(MdApi):
-    def __init__(self, monitor) -> None:
+class MainWindow(QWidget, simple_window.Ui_Form):
+    def __init__(self):
         super().__init__()
-        self.monitor = monitor
+        self.setupUi(self)
+
+
+# 独立信号代理类
+class SignalProxy(QtCore.QObject):
+    proxy = Signal(str)
+
+    def __init__(self):
+        super().__init__()
+
+
+class CtpMdApi(MdApi):
+    def __init__(self) -> None:
+        super().__init__()
+        self.sig_msg = SignalProxy()
 
     def onFrontConnected(self):
-        self.monitor.append('服务器连接成功！')
+        self.sig_msg.proxy.emit('行情服务器连接成功！')
         ctp_req: dict = {
             "UserID": "luozhw",
             "Password": "bitCAN080*!@@%",
@@ -21,33 +34,32 @@ class CtpMdApi(MdApi):
         self.reqUserLogin(ctp_req, 1)
 
     def onFrontDisconnected(self, reason):
-        self.monitor.append(f'服务器连接断开！原因：{reason}')
+        self.sig_msg.proxy.emit(f'行情服务器连接断开！{reason}')
 
-    def onRspUserLogin(self, data, error, reqid, last):
+    def onRspUserLogin(self, data, error, req_id, last):
         if not error['ErrorID']:
-            self.monitor.append('行情服务器登录成功！')
+            self.sig_msg.proxy.emit('行情服务器登录成功！')
         else:
-            self.monitor.append(f'行情服务器登录失败！错误信息：{error}')
+            self.sig_msg.proxy.emit(f'行情服务器登录失败！错误信息：{error}')
 
     def onRtnDepthMarketData(self, data: dict):
-        self.monitor.append(str(data))
+        self.sig_msg.proxy.emit(str(data))
 
 
 def main():
     app = QtWidgets.QApplication()
-    main_window = QtWidgets.QWidget()
-    widget = simple_window.Ui_Form()
-    widget.setupUi(main_window)
+    window = MainWindow()
 
-    api = CtpMdApi(widget.txt_browser)
+    api = CtpMdApi()
 
-    widget.btn_subscribe.clicked.connect(lambda: api.subscribeMarketData(widget.txt_symbol.text()))
+    window.btn_subscribe.clicked.connect(lambda: api.subscribeMarketData(window.txt_symbol.text()))
+    api.sig_msg.proxy.connect(window.txt_browser.append)
 
-    api.createFtdcMdApi('.')
+    api.createFtdcMdApi('./log')
     api.registerFront("tcp://180.168.146.187:10211")
     api.init()
 
-    main_window.show()
+    window.show()
     app.exec()
 
 
